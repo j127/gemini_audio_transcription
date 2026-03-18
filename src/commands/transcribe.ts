@@ -1,12 +1,19 @@
 import { getSecret, prompt } from "../secrets.ts";
 import { parseEnvNumber } from "../config.ts";
+import path from "path";
 import {
   MIME_TYPES,
   createGeminiClient,
   uploadFile,
+  generateFilename,
   createUserContent,
   createPartFromUri,
+  NAMING_MODEL,
+  NAMING_INPUT_COST_PER_M,
+  NAMING_OUTPUT_COST_PER_M,
 } from "../providers/gemini.ts";
+
+const OUTPUT_DIR = path.join(import.meta.dir, "../../output");
 
 export async function transcribe(filePath: string): Promise<void> {
   const ext = filePath.slice(filePath.lastIndexOf(".")).toLowerCase();
@@ -46,6 +53,9 @@ export async function transcribe(filePath: string): Promise<void> {
     `Max output tokens: ${maxOutputTokens.toLocaleString()} (cost: $${maxOutputCost.toFixed(4)})`
   );
   console.log(`Max total cost:    $${maxTotalCost.toFixed(4)}`);
+  console.log(
+    `Naming request:    ${NAMING_MODEL} (< $0.0001)`
+  );
 
   if (maxTotalCost > maxCost) {
     console.error(
@@ -80,11 +90,30 @@ export async function transcribe(filePath: string): Promise<void> {
 
   const outputTokens = response.usageMetadata?.candidatesTokenCount ?? 0;
   const outputCost = (outputTokens / 1_000_000) * 2.5;
-  const totalCost = inputCost + outputCost;
+
+  console.log("\nGenerating filename...");
+  const { name: description, cost: namingCost } = await generateFilename(
+    ai,
+    response.text
+  );
+
+  const date = new Date().toISOString().slice(0, 10);
+  const baseName = `${date}-${description}`;
+  let outputPath = path.join(OUTPUT_DIR, `${baseName}.txt`);
+  let counter = 2;
+  while (await Bun.file(outputPath).exists()) {
+    outputPath = path.join(OUTPUT_DIR, `${baseName}--${counter}.txt`);
+    counter++;
+  }
+  await Bun.write(outputPath, response.text);
+  console.log(`Saved to ${outputPath}`);
+
+  const totalCost = inputCost + outputCost + namingCost;
   console.log(
     `\nOutput tokens: ${outputTokens.toLocaleString()} (cost: $${outputCost.toFixed(4)})`
   );
-  console.log(`Total cost: $${totalCost.toFixed(4)}`);
+  console.log(`Naming cost:   $${namingCost.toFixed(4)}`);
+  console.log(`Total cost:    $${totalCost.toFixed(4)}`);
 
   process.exit(0);
 }
