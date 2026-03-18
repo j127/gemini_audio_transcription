@@ -1,3 +1,6 @@
+audio_samples/*
+!audio_samples/.keep
+
 .claude/
 .env
 .envrc

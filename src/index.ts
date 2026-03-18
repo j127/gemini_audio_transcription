@@ -1,88 +1,58 @@
-import { GoogleGenAI, Type } from "@google/genai";
+import {
+  GoogleGenAI,
+  createUserContent,
+  createPartFromUri,
+} from "@google/genai";
 
 const ai = new GoogleGenAI({});
 
-const YOUTUBE_URL = "https://www.youtube.com/watch?v=ku-N-eS1lgM";
+const filePath = process.argv[2];
+if (!filePath) {
+  console.error("Usage: bun run src/index.ts <audio-file>");
+  process.exit(1);
+}
+
+const mimeTypes: Record<string, string> = {
+  ".mp3": "audio/mp3",
+  ".wav": "audio/wav",
+  ".flac": "audio/flac",
+  ".ogg": "audio/ogg",
+  ".m4a": "audio/mp4",
+  ".aac": "audio/aac",
+  ".wma": "audio/x-ms-wma",
+  ".webm": "audio/webm",
+};
+
+const ext = filePath.slice(filePath.lastIndexOf(".")).toLowerCase();
+const mimeType = mimeTypes[ext];
+if (!mimeType) {
+  console.error(`Unsupported file extension: ${ext}`);
+  console.error(`Supported: ${Object.keys(mimeTypes).join(", ")}`);
+  process.exit(1);
+}
 
 async function main() {
-  const prompt = `
-      Process the audio file and generate a detailed transcription.
+  console.log(`Uploading ${filePath}...`);
+  const uploaded = await ai.files.upload({
+    file: filePath,
+    config: { mimeType },
+  });
 
-      Requirements:
-      1. Provide accurate timestamps for each segment (Format: MM:SS).
-      2. Detect the primary language of each segment.
-      3. If the segment is in a language different than English, also provide the English translation.
-      4. Identify the primary emotion of the speaker in this segment. You MUST choose exactly one of the following: Happy, Sad, Angry, Neutral.
-      5. Provide a brief summary of the entire audio at the beginning.
-    `;
-
-  const Emotion = {
-    Happy: "happy",
-    Sad: "sad",
-    Angry: "angry",
-    Neutral: "neutral",
-  };
+  console.log("Transcribing...");
 
   const response = await ai.models.generateContent({
-    model: "gemini-3-flash-preview",
-    contents: {
-      parts: [
-        {
-          fileData: {
-            fileUri: YOUTUBE_URL,
-          },
-        },
-        {
-          text: prompt,
-        },
-      ],
-    },
-    config: {
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: Type.OBJECT,
-        properties: {
-          summary: {
-            type: Type.STRING,
-            description: "A concise summary of the audio content.",
-          },
-          segments: {
-            type: Type.ARRAY,
-            description: "List of transcribed segments with timestamp.",
-            items: {
-              type: Type.OBJECT,
-              properties: {
-                timestamp: { type: Type.STRING },
-                content: { type: Type.STRING },
-                language: { type: Type.STRING },
-                language_code: { type: Type.STRING },
-                translation: { type: Type.STRING },
-                emotion: {
-                  type: Type.STRING,
-                  enum: Object.values(Emotion),
-                },
-              },
-              required: [
-                "timestamp",
-                "content",
-                "language",
-                "language_code",
-                "emotion",
-              ],
-            },
-          },
-        },
-        required: ["summary", "segments"],
-      },
-    },
+    model: "gemini-2.0-flash",
+    contents: createUserContent([
+      createPartFromUri(uploaded.uri!, uploaded.mimeType!),
+      "Generate a plain text transcription of this audio.",
+    ]),
   });
 
   if (!response.text) {
     throw new Error("No response from Gemini");
   }
 
-  const json = JSON.parse(response.text);
-  console.log(json);
+  console.log(response.text);
 }
 
 await main();
