@@ -99,6 +99,11 @@ MAX_COST=0.10 MAX_OUTPUT_TOKENS=4096 bun run src/index.ts ./audio_samples/2026-0
 - The script stops before generation if the estimated maximum cost is greater than `MAX_COST`
 - Audio is uploaded to the Gemini Files API as part of the transcription flow
 
+You might also want to take a look at these sections from Google's billing documentation:
+
+- https://ai.google.dev/gemini-api/docs/billing#about-billing
+- https://ai.google.dev/gemini-api/docs/billing#project-spend-caps
+
 ## Current limitations
 
 - Transcript output is printed to stdout only
