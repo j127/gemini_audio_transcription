@@ -2,7 +2,7 @@
 
 Small Bun CLI for transcribing local audio files with the Gemini API.
 
-It uploads an audio file, waits for Gemini to finish processing it, estimates the cost before generation, asks for confirmation, then prints a plain-text transcript to stdout.
+It uploads an audio file, waits for Gemini to finish processing it, estimates the cost before generation, asks for confirmation, then saves a plain-text transcript to the `output/` directory.
 
 <mark><strong>Caution:</strong></mark> use this code at your own risk. Be sure that you understand how the script works and the pricing before using it.
 
@@ -11,6 +11,7 @@ It uploads an audio file, waits for Gemini to finish processing it, estimates th
 - Transcribes a local audio file with `gemini-2.5-flash`
 - Estimates input and maximum output cost before sending the transcription request
 - Prompts for confirmation before continuing
+- Saves the transcript to `output/` with an auto-generated descriptive filename
 - Stores your Gemini API key in the system keychain via [Bun secrets](https://bun.com/docs/runtime/secrets)
 
 ## Before you start
@@ -58,8 +59,10 @@ On first run, the script will prompt for your Gemini API key and save it to the 
 1. The script uploads your audio file to Gemini.
 2. It waits until Gemini marks the file as ready.
 3. It counts tokens and estimates the maximum cost.
-4. It asks `Proceed? [Y/n]`.
-5. It prints the transcript and final token usage.
+4. It shows current settings (`MAX_OUTPUT_TOKENS`, `MAX_COST`) and asks `Proceed? [Y/n]`.
+5. It prints the transcript and saves it to `output/YYYY-MM-DD-<description>.txt`.
+6. It uses `gemini-2.5-flash-lite` to generate the descriptive filename.
+7. It prints the final token usage and cost breakdown.
 
 ## Commands
 
@@ -98,9 +101,9 @@ MAX_COST=0.10 MAX_OUTPUT_TOKENS=4096 transcribe ./audio_samples/2026-03-audio-te
 
 ## Cost and safety notes
 
-- Pricing in the script is hardcoded for `gemini-2.5-flash`
-- If Google changes pricing, the estimate in this repo can become inaccurate
-- Check current pricing here: [Gemini API pricing](https://ai.google.dev/gemini-api/docs/pricing#gemini-2.5-flash)
+- Pricing in the script is hardcoded for `gemini-2.5-flash` (transcription) and `gemini-2.5-flash-lite` (filename generation)
+- If Google changes pricing, the estimates in this repo can become inaccurate
+- Check current pricing here: [Gemini API pricing](https://ai.google.dev/gemini-api/docs/pricing)
 - The script stops before generation if the estimated maximum cost is greater than `MAX_COST`
 - Audio is uploaded to the Gemini Files API as part of the transcription flow
 
@@ -111,7 +114,6 @@ You might also want to take a look at these sections from Google's billing docum
 
 ## Current limitations
 
-- Transcript output is printed to stdout only
 - No timestamps
 - No speaker diarization
 - No automatic pricing refresh
@@ -124,7 +126,6 @@ You might also want to take a look at these sections from Google's billing docum
 
 ## Future improvements
 
-- Save transcripts to a file
 - Add timestamps
 - Add speaker identification
 - Fetch pricing dynamically instead of hardcoding it
