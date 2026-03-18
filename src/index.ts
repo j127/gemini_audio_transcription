@@ -81,23 +81,30 @@ async function main() {
   ]);
 
   const tokenCount = await ai.models.countTokens({
-    model: "gemini-2.0-flash",
+    model: "gemini-2.5-flash",
     contents,
   });
 
+  const maxOutputTokens = parseInt(process.env.MAX_OUTPUT_TOKENS ?? "8192", 10);
+
   const inputTokens = tokenCount.totalTokens!;
-  const inputCost = (inputTokens / 1_000_000) * 0.7;
+  const inputCost = (inputTokens / 1_000_000) * 1.0; // $1.00/1M audio input tokens
+  const maxOutputCost = (maxOutputTokens / 1_000_000) * 2.5; // $2.50/1M output tokens
+  const maxTotalCost = inputCost + maxOutputCost;
   console.log(
-    `Input tokens: ${inputTokens.toLocaleString()} (estimated cost: $${inputCost.toFixed(4)})`,
+    `Input tokens:      ${inputTokens.toLocaleString()} (cost: $${inputCost.toFixed(4)})`,
   );
   console.log(
-    "Note: output tokens will add ~$0.40/1M tokens on top of this.",
+    `Max output tokens: ${maxOutputTokens.toLocaleString()} (cost: $${maxOutputCost.toFixed(4)})`,
+  );
+  console.log(
+    `Max total cost:    $${maxTotalCost.toFixed(4)}`,
   );
 
   const maxCost = parseFloat(process.env.MAX_COST ?? "0.50");
-  if (inputCost > maxCost) {
+  if (maxTotalCost > maxCost) {
     console.error(
-      `Aborting: estimated input cost $${inputCost.toFixed(4)} exceeds MAX_COST $${maxCost.toFixed(2)}`,
+      `Aborting: estimated max cost $${maxTotalCost.toFixed(4)} exceeds MAX_COST $${maxCost.toFixed(2)}`,
     );
     process.exit(1);
   }
@@ -111,8 +118,9 @@ async function main() {
   console.log("Transcribing...");
 
   const response = await ai.models.generateContent({
-    model: "gemini-2.0-flash",
+    model: "gemini-2.5-flash",
     contents,
+    config: { maxOutputTokens },
   });
 
   if (!response.text) {
@@ -120,6 +128,16 @@ async function main() {
   }
 
   console.log(response.text);
+
+  const outputTokens = response.usageMetadata?.candidatesTokenCount ?? 0;
+  const outputCost = (outputTokens / 1_000_000) * 2.5; // $2.50/1M output tokens
+  const totalCost = inputCost + outputCost;
+  console.log(
+    `\nOutput tokens: ${outputTokens.toLocaleString()} (cost: $${outputCost.toFixed(4)})`,
+  );
+  console.log(`Total cost: $${totalCost.toFixed(4)}`);
+
+  process.exit(0);
 }
 
 await main();
