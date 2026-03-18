@@ -98,8 +98,13 @@ export async function transcribe(filePath: string): Promise<void> {
   );
 
   const date = new Date().toISOString().slice(0, 10);
-  const filename = `${date}-${description}.txt`;
-  const outputPath = path.join(OUTPUT_DIR, filename);
+  const baseName = `${date}-${description}`;
+  let outputPath = path.join(OUTPUT_DIR, `${baseName}.txt`);
+  let counter = 2;
+  while (await Bun.file(outputPath).exists()) {
+    outputPath = path.join(OUTPUT_DIR, `${baseName}--${counter}.txt`);
+    counter++;
+  }
   await Bun.write(outputPath, response.text);
   console.log(`Saved to ${outputPath}`);
 

@@ -43,9 +43,9 @@ async function waitForFileActive(
   }
 }
 
-export const NAMING_MODEL = "gemini-2.0-flash-lite";
-export const NAMING_INPUT_COST_PER_M = 0.075;
-export const NAMING_OUTPUT_COST_PER_M = 0.3;
+export const NAMING_MODEL = "gemini-2.5-flash-lite";
+export const NAMING_INPUT_COST_PER_M = 0.1;
+export const NAMING_OUTPUT_COST_PER_M = 0.4;
 
 export async function generateFilename(
   ai: GoogleGenAI,
