@@ -4,7 +4,9 @@
   "scripts": {
     "format": "prettier --write '**/*.{md,mdx,ts,js,mjs,cjs,jsx,tsx,yaml,yml,json,html,css,scss,vue,astro}'"
   },
-  "dependencies": {},
+  "dependencies": {
+    "@google/genai": "^1.46.0"
+  },
   "devDependencies": {
     "@types/bun": "latest",
     "prettier": "^3.8.1"
