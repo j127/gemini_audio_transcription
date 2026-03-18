@@ -4,11 +4,45 @@ import {
   createPartFromUri,
 } from "@google/genai";
 
-const ai = new GoogleGenAI({});
+const SERVICE = "gemini-transcribe";
+
+function prompt(message: string): Promise<string> {
+  process.stdout.write(message);
+  return new Promise((resolve) => {
+    process.stdin.once("data", (data) => resolve(data.toString().trim()));
+  });
+}
+
+async function getSecret(name: string, promptMessage: string): Promise<string> {
+  let value = await Bun.secrets.get({ service: SERVICE, name });
+  if (!value) {
+    value = await prompt(promptMessage);
+    if (!value) {
+      console.error("No value provided. Aborting.");
+      process.exit(1);
+    }
+    await Bun.secrets.set({ service: SERVICE, name, value });
+    console.log(`Saved "${name}" to keychain.`);
+  }
+  return value;
+}
+
+// --set-key: manually set/update the API key
+if (process.argv[2] === "--set-key") {
+  const key = await prompt("Enter Gemini API key: ");
+  if (!key) {
+    console.error("No key provided.");
+    process.exit(1);
+  }
+  await Bun.secrets.set({ service: SERVICE, name: "api-key", value: key });
+  console.log("API key saved to keychain.");
+  process.exit(0);
+}
 
 const filePath = process.argv[2];
 if (!filePath) {
   console.error("Usage: bun run src/index.ts <audio-file>");
+  console.error("       bun run src/index.ts --set-key");
   process.exit(1);
 }
 
@@ -32,6 +66,9 @@ if (!mimeType) {
 }
 
 async function main() {
+  const apiKey = await getSecret("api-key", "Enter Gemini API key: ");
+  const ai = new GoogleGenAI({ apiKey });
+
   console.log(`Uploading ${filePath}...`);
   const uploaded = await ai.files.upload({
     file: filePath,
@@ -65,10 +102,7 @@ async function main() {
     process.exit(1);
   }
 
-  process.stdout.write("Proceed? [Y/n] ");
-  const answer = (await new Promise<string>((resolve) => {
-    process.stdin.once("data", (data) => resolve(data.toString().trim()));
-  })).toLowerCase();
+  const answer = (await prompt("Proceed? [Y/n] ")).toLowerCase();
   if (answer && answer !== "y" && answer !== "yes") {
     console.log("Aborted.");
     process.exit(0);
