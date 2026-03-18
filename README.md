@@ -49,7 +49,7 @@ bun link
 Run the script with an audio file:
 
 ```bash
-transcribe <path_to_audio_file>
+transcribe my_spoken_notes.mp3
 ```
 
 On first run, the script will prompt for your Gemini API key and save it to the keychain.
