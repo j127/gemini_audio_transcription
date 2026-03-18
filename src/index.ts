@@ -1,3 +1,5 @@
+#!/usr/bin/env bun
+
 import {
   GoogleGenAI,
   createUserContent,
@@ -52,8 +54,8 @@ if (process.argv[2] === "--set-key") {
 
 const fileArg = process.argv[2];
 if (!fileArg) {
-  console.error("Usage: bun run src/index.ts <audio-file>");
-  console.error("       bun run src/index.ts --set-key");
+  console.error("Usage: transcribe <audio-file>");
+  console.error("       transcribe --set-key");
   process.exit(1);
 }
 const filePath: string = fileArg;

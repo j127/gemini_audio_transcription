@@ -30,20 +30,25 @@ Supported file types:
 - `.wma`
 - `.webm`
 
-## Quick start
+## Installation
 
 Install [Bun](https://bun.com/docs/installation).
 
-Install dependencies:
+Install dependencies and link the package globally:
 
 ```bash
 bun install
+bun link
 ```
+
+> **Note:** `bun link` creates a symlink to this directory. If you pull a latest version from GitHub, you do not need to run `bun link` again. The `transcribe` command will automatically use the latest code in this directory.
+
+## Quick start
 
 Run the script with an audio file:
 
 ```bash
-bun run src/index.ts ./audio_samples/2026-03-audio-test.m4a
+transcribe ./audio_samples/2026-03-audio-test.m4a
 ```
 
 On first run, the script will prompt for your Gemini API key and save it to the keychain.
@@ -61,13 +66,13 @@ On first run, the script will prompt for your Gemini API key and save it to the 
 Transcribe a file:
 
 ```bash
-bun run src/index.ts <audio-file>
+transcribe <audio-file>
 ```
 
 Set or replace the saved API key manually:
 
 ```bash
-bun run src/index.ts --set-key
+transcribe --set-key
 ```
 
 Delete the saved API key:
@@ -88,7 +93,7 @@ The script reads these optional environment variables:
 Example:
 
 ```bash
-MAX_COST=0.10 MAX_OUTPUT_TOKENS=4096 bun run src/index.ts ./audio_samples/2026-03-audio-test.m4a
+MAX_COST=0.10 MAX_OUTPUT_TOKENS=4096 transcribe ./audio_samples/2026-03-audio-test.m4a
 ```
 
 ## Cost and safety notes
