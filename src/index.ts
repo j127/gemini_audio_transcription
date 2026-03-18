@@ -77,7 +77,11 @@ if (!mimeType) {
   process.exit(1);
 }
 
-async function waitForFileActive(ai: GoogleGenAI, fileName: string, maxWaitMs = 60_000) {
+async function waitForFileActive(
+  ai: GoogleGenAI,
+  fileName: string,
+  maxWaitMs = 60_000
+) {
   const start = Date.now();
   while (true) {
     const file = await ai.files.get({ name: fileName });
@@ -86,7 +90,9 @@ async function waitForFileActive(ai: GoogleGenAI, fileName: string, maxWaitMs = 
       throw new Error(`File processing failed: ${fileName}`);
     }
     if (Date.now() - start > maxWaitMs) {
-      throw new Error(`Timed out waiting for file to become ACTIVE after ${maxWaitMs / 1000}s`);
+      throw new Error(
+        `Timed out waiting for file to become ACTIVE after ${maxWaitMs / 1000}s`
+      );
     }
     console.log("Waiting for file to be processed...");
     await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -123,18 +129,16 @@ async function main() {
   const maxOutputCost = (maxOutputTokens / 1_000_000) * 2.5; // $2.50/1M output tokens
   const maxTotalCost = inputCost + maxOutputCost;
   console.log(
-    `Input tokens:      ${inputTokens.toLocaleString()} (cost: $${inputCost.toFixed(4)})`,
+    `Input tokens:      ${inputTokens.toLocaleString()} (cost: $${inputCost.toFixed(4)})`
   );
   console.log(
-    `Max output tokens: ${maxOutputTokens.toLocaleString()} (cost: $${maxOutputCost.toFixed(4)})`,
+    `Max output tokens: ${maxOutputTokens.toLocaleString()} (cost: $${maxOutputCost.toFixed(4)})`
   );
-  console.log(
-    `Max total cost:    $${maxTotalCost.toFixed(4)}`,
-  );
+  console.log(`Max total cost:    $${maxTotalCost.toFixed(4)}`);
 
   if (maxTotalCost > maxCost) {
     console.error(
-      `Aborting: estimated max cost $${maxTotalCost.toFixed(4)} exceeds MAX_COST $${maxCost.toFixed(2)}`,
+      `Aborting: estimated max cost $${maxTotalCost.toFixed(4)} exceeds MAX_COST $${maxCost.toFixed(2)}`
     );
     process.exit(1);
   }
@@ -163,7 +167,7 @@ async function main() {
   const outputCost = (outputTokens / 1_000_000) * 2.5; // $2.50/1M output tokens
   const totalCost = inputCost + outputCost;
   console.log(
-    `\nOutput tokens: ${outputTokens.toLocaleString()} (cost: $${outputCost.toFixed(4)})`,
+    `\nOutput tokens: ${outputTokens.toLocaleString()} (cost: $${outputCost.toFixed(4)})`
   );
   console.log(`Total cost: $${totalCost.toFixed(4)}`);
 
