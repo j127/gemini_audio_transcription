@@ -54,7 +54,11 @@ export async function transcribe(filePath: string): Promise<void> {
     process.exit(1);
   }
 
-  const answer = (await prompt("Proceed? [Y/n] ")).toLowerCase();
+  console.log(`\nSettings (override via environment variables):`);
+  console.log(`  MAX_OUTPUT_TOKENS:\t${maxOutputTokens}`);
+  console.log(`  MAX_COST:\t\t${maxCost}`);
+
+  const answer = (await prompt("\nProceed? [Y/n] ")).toLowerCase();
   if (answer && answer !== "y" && answer !== "yes") {
     console.log("Aborted.");
     process.exit(0);
