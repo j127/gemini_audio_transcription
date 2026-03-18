@@ -1,8 +1,7 @@
 output/*
 !output/.keep
 
-audio_samples/*
-!audio_samples/.keep
+audio_samples/
 
 .claude/
 .env
