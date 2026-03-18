@@ -27,6 +27,17 @@ async function getSecret(name: string, promptMessage: string): Promise<string> {
   return value;
 }
 
+function parseEnvNumber(name: string, fallback: number): number {
+  const raw = process.env[name];
+  if (raw === undefined) return fallback;
+  const parsed = Number(raw);
+  if (isNaN(parsed)) {
+    console.error(`Invalid ${name}: "${raw}" is not a number.`);
+    process.exit(1);
+  }
+  return parsed;
+}
+
 // --set-key: manually set/update the API key
 if (process.argv[2] === "--set-key") {
   const key = await prompt("Enter Gemini API key: ");
@@ -39,15 +50,16 @@ if (process.argv[2] === "--set-key") {
   process.exit(0);
 }
 
-const filePath = process.argv[2];
-if (!filePath) {
+const fileArg = process.argv[2];
+if (!fileArg) {
   console.error("Usage: bun run src/index.ts <audio-file>");
   console.error("       bun run src/index.ts --set-key");
   process.exit(1);
 }
+const filePath: string = fileArg;
 
 const mimeTypes: Record<string, string> = {
-  ".mp3": "audio/mp3",
+  ".mp3": "audio/mpeg",
   ".wav": "audio/wav",
   ".flac": "audio/flac",
   ".ogg": "audio/ogg",
@@ -65,6 +77,22 @@ if (!mimeType) {
   process.exit(1);
 }
 
+async function waitForFileActive(ai: GoogleGenAI, fileName: string, maxWaitMs = 60_000) {
+  const start = Date.now();
+  while (true) {
+    const file = await ai.files.get({ name: fileName });
+    if (file.state === "ACTIVE") return file;
+    if (file.state === "FAILED") {
+      throw new Error(`File processing failed: ${fileName}`);
+    }
+    if (Date.now() - start > maxWaitMs) {
+      throw new Error(`Timed out waiting for file to become ACTIVE after ${maxWaitMs / 1000}s`);
+    }
+    console.log("Waiting for file to be processed...");
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+  }
+}
+
 async function main() {
   const apiKey = await getSecret("api-key", "Enter Gemini API key: ");
   const ai = new GoogleGenAI({ apiKey });
@@ -75,8 +103,10 @@ async function main() {
     config: { mimeType },
   });
 
+  const file = await waitForFileActive(ai, uploaded.name!);
+
   const contents = createUserContent([
-    createPartFromUri(uploaded.uri!, uploaded.mimeType!),
+    createPartFromUri(file.uri!, file.mimeType!),
     "Generate a plain text transcription of this audio.",
   ]);
 
@@ -85,7 +115,8 @@ async function main() {
     contents,
   });
 
-  const maxOutputTokens = parseInt(process.env.MAX_OUTPUT_TOKENS ?? "8192", 10);
+  const maxOutputTokens = parseEnvNumber("MAX_OUTPUT_TOKENS", 8192);
+  const maxCost = parseEnvNumber("MAX_COST", 0.5);
 
   const inputTokens = tokenCount.totalTokens!;
   const inputCost = (inputTokens / 1_000_000) * 1.0; // $1.00/1M audio input tokens
@@ -101,7 +132,6 @@ async function main() {
     `Max total cost:    $${maxTotalCost.toFixed(4)}`,
   );
 
-  const maxCost = parseFloat(process.env.MAX_COST ?? "0.50");
   if (maxTotalCost > maxCost) {
     console.error(
       `Aborting: estimated max cost $${maxTotalCost.toFixed(4)} exceeds MAX_COST $${maxCost.toFixed(2)}`,
