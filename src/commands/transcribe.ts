@@ -34,7 +34,7 @@ const FLAG_CONFIGS: Record<string, FlagConfig> = {
     suffix: "formatted",
     ext: ".md",
     prompt:
-      "Generate a well-formatted Markdown transcription of this audio. Use headers, paragraphs, and lists as appropriate. Remove filler words (um, uh, like) but do not change the actual vocabulary or meaning. Identify and label individual speakers (e.g., Speaker 1, Speaker 2, or by name if inferable).",
+      "Generate a well-formatted Markdown transcription of this audio. Use headers, paragraphs, and lists as appropriate so that it can be read like an article. Remove filler words (um, uh) but do not change the actual vocabulary or meaning. If a speaker stumbles on words or unintentionally repeats words, smooth it out so that it reads without the speakers mistakes and false starts, but don't remove conjunctions that are used correctly. Identify and label individual speakers (e.g., Speaker 1, Speaker 2, or by name if inferable).",
   },
   timestamp: {
     suffix: "timestamped",
@@ -117,8 +117,10 @@ export async function transcribe(
   const totalCalls = 1 + activeFlags.length;
 
   const inputTokens = tokenCount.totalTokens!;
-  const estInputCost = inputCost(inputTokens, TRANSCRIPTION_INPUT_COST_PER_M) * totalCalls;
-  const estMaxOutputCost = outputCost(maxOutputTokens, TRANSCRIPTION_OUTPUT_COST_PER_M) * totalCalls;
+  const estInputCost =
+    inputCost(inputTokens, TRANSCRIPTION_INPUT_COST_PER_M) * totalCalls;
+  const estMaxOutputCost =
+    outputCost(maxOutputTokens, TRANSCRIPTION_OUTPUT_COST_PER_M) * totalCalls;
   const maxTotalCost = estInputCost + estMaxOutputCost;
   console.log(
     `Input tokens:      ${inputTokens.toLocaleString()} x ${totalCalls} call${totalCalls > 1 ? "s" : ""} (cost: $${estInputCost.toFixed(4)})`
