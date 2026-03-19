@@ -2,7 +2,7 @@
 
 This is a simple [Bun](https://bun.sh/) (TypeScript) CLI for transcribing and summarizing local audio files with the Gemini API. Installing it will create a `transcribe` command that you can use from anywhere in your terminal.
 
-<mark><strong>CAUTION:</strong></mark> Use this code at your own risk. Be sure that you understand how this script works and that you double-check Google's API pricing before using it (see below).
+<mark><strong>CAUTION:</strong></mark> Use this "alpha" code at your own risk. Be sure that you understand how this script works and that you double-check Google's API pricing before using it (see below).
 
 ## What this does
 
