@@ -1,3 +1,6 @@
+// Shared keychain and prompt helpers for reading interactive input and storing
+// the Gemini API key via Bun secrets.
+
 export const SERVICE = "gemini-transcribe";
 
 export function prompt(message: string): Promise<string> {

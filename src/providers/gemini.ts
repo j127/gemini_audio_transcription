@@ -1,3 +1,6 @@
+// Gemini-specific integration helpers: client construction, supported audio
+// MIME types, file upload polling, and filename generation.
+
 import {
   GoogleGenAI,
   createUserContent,
@@ -57,7 +60,9 @@ export async function generateFilename(
     config: { maxOutputTokens: 32 },
   });
 
-  const name = (response.text ?? "transcription").trim().replace(/[^a-z0-9-]/g, "");
+  const name = (response.text ?? "transcription")
+    .trim()
+    .replace(/[^a-z0-9-]/g, "");
   const inputTokens = response.usageMetadata?.promptTokenCount ?? 0;
   const outputTokens = response.usageMetadata?.candidatesTokenCount ?? 0;
   const cost =

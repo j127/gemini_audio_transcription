@@ -1,5 +1,8 @@
 #!/usr/bin/env bun
 
+// CLI entry point. Parses command-line flags, validates arguments, and
+// dispatches to either key management or the transcription workflow.
+
 import { setKey } from "./commands/set-key.ts";
 import { transcribe } from "./commands/transcribe.ts";
 
@@ -43,7 +46,9 @@ if (!fileArg) {
   console.error("");
   console.error("Flags:");
   console.error("  -s, --summarize   Generate a summary of the transcription");
-  console.error("  -f, --format      Generate a formatted version with speaker labels");
+  console.error(
+    "  -f, --format      Generate a formatted version with speaker labels"
+  );
   console.error("  -t, --timestamp   Generate a timestamped transcription");
   process.exit(1);
 }

@@ -1,3 +1,6 @@
+// Small configuration helpers for reading and validating numeric environment
+// variables used by the CLI.
+
 export function parseEnvNumber(name: string, fallback: number): number {
   const raw = process.env[name];
   if (raw === undefined) return fallback;

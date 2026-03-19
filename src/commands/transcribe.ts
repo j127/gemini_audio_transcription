@@ -1,3 +1,6 @@
+// Main transcription workflow: validates the audio file, estimates cost,
+// generates the requested outputs, and saves them with coordinated filenames.
+
 import { getSecret, prompt } from "../secrets.ts";
 import { parseEnvNumber } from "../config.ts";
 import path from "path";
@@ -49,12 +52,17 @@ function buildOutputPath(
   return path.join(OUTPUT_DIR, `${baseName}${suffixPart}${counterPart}${ext}`);
 }
 
+// Counter selection has to consider every file this run may emit, not just the
+// base transcript. Otherwise a leftover derived file could be overwritten if
+// the matching `.txt` was deleted manually.
 async function anyOutputExists(
   baseName: string,
   counter: number | null,
   activeFlags: string[]
 ): Promise<boolean> {
-  if (await Bun.file(buildOutputPath(baseName, null, counter, ".txt")).exists()) {
+  if (
+    await Bun.file(buildOutputPath(baseName, null, counter, ".txt")).exists()
+  ) {
     return true;
   }
   for (const flag of activeFlags) {
@@ -70,6 +78,8 @@ async function anyOutputExists(
   return false;
 }
 
+// One transcription run should produce a matched set of filenames, so the same
+// counter is reused across the base transcript and all requested derivatives.
 async function findAvailableCounter(
   baseName: string,
   activeFlags: string[]
@@ -84,6 +94,8 @@ async function findAvailableCounter(
   return counter;
 }
 
+// Variations are generated with separate prompts instead of post-processing the
+// base transcript so each output can optimize for its own format and structure.
 async function generateVariation(
   ai: GoogleGenAI,
   fileUri: string,
@@ -111,6 +123,10 @@ async function generateVariation(
   return { text: response.text, outputTokens, cost };
 }
 
+/**
+ * Transcribe one local audio file and optionally generate additional outputs
+ * such as a summary, formatted transcript, or timestamped transcript.
+ */
 export async function transcribe(
   filePath: string,
   flags: Set<string> = new Set()
@@ -142,7 +158,9 @@ export async function transcribe(
   const maxCost = parseEnvNumber("MAX_COST", 0.5);
 
   const activeFlags = [...flags].filter((f) => f in FLAG_CONFIGS);
-  // 1 base call + N flag calls, each could use up to maxOutputTokens
+  // Every requested variation is its own generateContent call against the same
+  // uploaded audio, so the upfront estimate has to scale with the number of
+  // outputs we may ask Gemini to produce.
   const totalCalls = 1 + activeFlags.length;
 
   const inputTokens = tokenCount.totalTokens!;
