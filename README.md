@@ -139,8 +139,8 @@ If you request extra outputs with flags, the cost estimate scales up to include 
 
 You might also want to take a look at these sections from Google's billing documentation:
 
-- https://ai.google.dev/gemini-api/docs/billing#about-billing
-- https://ai.google.dev/gemini-api/docs/billing#project-spend-caps
+- [Gemini: About Billing](https://ai.google.dev/gemini-api/docs/billing#about-billing)
+- [Gemini: Project Spend Caps](https://ai.google.dev/gemini-api/docs/billing#project-spend-caps)
 
 ## Current limitations
 
