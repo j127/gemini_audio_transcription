@@ -1,10 +1,8 @@
 # gemini_audio_transcription
 
-Small Bun CLI for transcribing local audio files with the Gemini API.
+This is a simple [Bun](https://bun.sh/) (TypeScript) CLI for transcribing and summarizing local audio files with the Gemini API. Installing it will create a `transcribe` command that you can use from anywhere in your terminal.
 
-It uploads an audio file, waits for Gemini to finish processing it, estimates the cost before generation, asks for confirmation, then saves a plain-text transcript to the `output/` directory.
-
-<mark><strong>Caution:</strong></mark> use this code at your own risk. Be sure that you understand how the script works and the pricing before using it.
+<mark><strong>CAUTION:</strong></mark> Use this code at your own risk. Be sure that you understand how this script works and that you double-check Google's API pricing before using it (see below).
 
 ## What this does
 
@@ -17,7 +15,7 @@ It uploads an audio file, waits for Gemini to finish processing it, estimates th
 
 ## Before you start
 
-- Bun `1.3.11` or compatible
+- Bun -- see the `.bun-version` file for the exact version that was used while developing the script
 - A Gemini API key from [Google AI Studio](https://aistudio.google.com/app/api-keys)
 - One local audio file in a supported format
 
@@ -57,6 +55,9 @@ Generate extra outputs alongside the plain-text transcript:
 
 ```bash
 transcribe --summarize --format --timestamp my_spoken_notes.mp3
+
+# or shorthand:
+transcribe -s -f -t my_spoken_notes.mp3
 ```
 
 On first run, the script will prompt for your Gemini API key and save it to the keychain.
