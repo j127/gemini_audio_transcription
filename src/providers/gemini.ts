@@ -6,6 +6,13 @@ import {
   createUserContent,
   createPartFromUri,
 } from "@google/genai";
+import {
+  NAMING_MODEL,
+  NAMING_INPUT_COST_PER_M,
+  NAMING_OUTPUT_COST_PER_M,
+  inputCost,
+  outputCost,
+} from "@/costs.ts";
 
 export { createUserContent, createPartFromUri };
 
@@ -46,10 +53,6 @@ async function waitForFileActive(
   }
 }
 
-export const NAMING_MODEL = "gemini-2.5-flash-lite";
-export const NAMING_INPUT_COST_PER_M = 0.1;
-export const NAMING_OUTPUT_COST_PER_M = 0.4;
-
 export async function generateFilename(
   ai: GoogleGenAI,
   transcription: string
@@ -63,11 +66,11 @@ export async function generateFilename(
   const name = (response.text ?? "transcription")
     .trim()
     .replace(/[^a-z0-9-]/g, "");
-  const inputTokens = response.usageMetadata?.promptTokenCount ?? 0;
-  const outputTokens = response.usageMetadata?.candidatesTokenCount ?? 0;
+  const inTokens = response.usageMetadata?.promptTokenCount ?? 0;
+  const outTokens = response.usageMetadata?.candidatesTokenCount ?? 0;
   const cost =
-    (inputTokens / 1_000_000) * NAMING_INPUT_COST_PER_M +
-    (outputTokens / 1_000_000) * NAMING_OUTPUT_COST_PER_M;
+    inputCost(inTokens, NAMING_INPUT_COST_PER_M) +
+    outputCost(outTokens, NAMING_OUTPUT_COST_PER_M);
 
   return { name: name || "transcription", cost };
 }

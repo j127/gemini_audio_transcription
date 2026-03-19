@@ -3,7 +3,6 @@
 
 import { getSecret, prompt } from "@/secrets.ts";
 import { parseEnvNumber } from "@/config.ts";
-import path from "path";
 import type { GoogleGenAI } from "@google/genai";
 import {
   MIME_TYPES,
@@ -12,15 +11,19 @@ import {
   generateFilename,
   createUserContent,
   createPartFromUri,
-  NAMING_MODEL,
 } from "@/providers/gemini.ts";
+import {
+  TRANSCRIPTION_MODEL,
+  TRANSCRIPTION_INPUT_COST_PER_M,
+  TRANSCRIPTION_OUTPUT_COST_PER_M,
+  NAMING_MODEL,
+  inputCost,
+  outputCost,
+} from "@/costs.ts";
+import type { FlagConfig } from "@/output.ts";
+import { buildOutputPath, findAvailableCounter } from "@/output.ts";
 
-const OUTPUT_DIR = path.join(import.meta.dir, "../../output");
-
-const FLAG_CONFIGS: Record<
-  string,
-  { suffix: string; ext: string; prompt: string }
-> = {
+const FLAG_CONFIGS: Record<string, FlagConfig> = {
   summarize: {
     suffix: "summary",
     ext: ".md",
@@ -41,59 +44,6 @@ const FLAG_CONFIGS: Record<
   },
 };
 
-function buildOutputPath(
-  baseName: string,
-  suffix: string | null,
-  counter: number | null,
-  ext: string
-): string {
-  const suffixPart = suffix ? `_${suffix}` : "";
-  const counterPart = counter ? `--${counter}` : "";
-  return path.join(OUTPUT_DIR, `${baseName}${suffixPart}${counterPart}${ext}`);
-}
-
-// Counter selection has to consider every file this run may emit, not just the
-// base transcript. Otherwise a leftover derived file could be overwritten if
-// the matching `.txt` was deleted manually.
-async function anyOutputExists(
-  baseName: string,
-  counter: number | null,
-  activeFlags: string[]
-): Promise<boolean> {
-  if (
-    await Bun.file(buildOutputPath(baseName, null, counter, ".txt")).exists()
-  ) {
-    return true;
-  }
-  for (const flag of activeFlags) {
-    const config = FLAG_CONFIGS[flag]!;
-    if (
-      await Bun.file(
-        buildOutputPath(baseName, config.suffix, counter, config.ext)
-      ).exists()
-    ) {
-      return true;
-    }
-  }
-  return false;
-}
-
-// One transcription run should produce a matched set of filenames, so the same
-// counter is reused across the base transcript and all requested derivatives.
-async function findAvailableCounter(
-  baseName: string,
-  activeFlags: string[]
-): Promise<number | null> {
-  if (!(await anyOutputExists(baseName, null, activeFlags))) {
-    return null;
-  }
-  let counter = 2;
-  while (await anyOutputExists(baseName, counter, activeFlags)) {
-    counter++;
-  }
-  return counter;
-}
-
 // Variations are generated with separate prompts instead of post-processing the
 // base transcript so each output can optimize for its own format and structure.
 async function generateVariation(
@@ -109,7 +59,7 @@ async function generateVariation(
   ]);
 
   const response = await ai.models.generateContent({
-    model: "gemini-2.5-flash",
+    model: TRANSCRIPTION_MODEL,
     contents,
     config: { maxOutputTokens },
   });
@@ -118,9 +68,12 @@ async function generateVariation(
     throw new Error("No response from Gemini");
   }
 
-  const outputTokens = response.usageMetadata?.candidatesTokenCount ?? 0;
-  const cost = (outputTokens / 1_000_000) * 2.5;
-  return { text: response.text, outputTokens, cost };
+  const tokens = response.usageMetadata?.candidatesTokenCount ?? 0;
+  return {
+    text: response.text,
+    outputTokens: tokens,
+    cost: outputCost(tokens, TRANSCRIPTION_OUTPUT_COST_PER_M),
+  };
 }
 
 /**
@@ -150,7 +103,7 @@ export async function transcribe(
   ]);
 
   const tokenCount = await ai.models.countTokens({
-    model: "gemini-2.5-flash",
+    model: TRANSCRIPTION_MODEL,
     contents,
   });
 
@@ -164,14 +117,14 @@ export async function transcribe(
   const totalCalls = 1 + activeFlags.length;
 
   const inputTokens = tokenCount.totalTokens!;
-  const inputCost = (inputTokens / 1_000_000) * 1.0 * totalCalls;
-  const maxOutputCost = ((maxOutputTokens * totalCalls) / 1_000_000) * 2.5;
-  const maxTotalCost = inputCost + maxOutputCost;
+  const estInputCost = inputCost(inputTokens, TRANSCRIPTION_INPUT_COST_PER_M) * totalCalls;
+  const estMaxOutputCost = outputCost(maxOutputTokens, TRANSCRIPTION_OUTPUT_COST_PER_M) * totalCalls;
+  const maxTotalCost = estInputCost + estMaxOutputCost;
   console.log(
-    `Input tokens:      ${inputTokens.toLocaleString()} x ${totalCalls} call${totalCalls > 1 ? "s" : ""} (cost: $${inputCost.toFixed(4)})`
+    `Input tokens:      ${inputTokens.toLocaleString()} x ${totalCalls} call${totalCalls > 1 ? "s" : ""} (cost: $${estInputCost.toFixed(4)})`
   );
   console.log(
-    `Max output tokens: ${maxOutputTokens.toLocaleString()} x ${totalCalls} call${totalCalls > 1 ? "s" : ""} (cost: $${maxOutputCost.toFixed(4)})`
+    `Max output tokens: ${maxOutputTokens.toLocaleString()} x ${totalCalls} call${totalCalls > 1 ? "s" : ""} (cost: $${estMaxOutputCost.toFixed(4)})`
   );
   console.log(`Max total cost:    $${maxTotalCost.toFixed(4)}`);
   console.log(`Naming request:    ${NAMING_MODEL} (< $0.0001)`);
@@ -220,7 +173,8 @@ export async function transcribe(
 
   const date = new Date().toISOString().slice(0, 10);
   const baseName = `${date}-${description}`;
-  const counter = await findAvailableCounter(baseName, activeFlags);
+  const activeFlagConfigs = activeFlags.map((f) => FLAG_CONFIGS[f]!);
+  const counter = await findAvailableCounter(baseName, activeFlagConfigs);
 
   // Save base transcription
   const baseOutputPath = buildOutputPath(baseName, null, counter, ".txt");
@@ -252,7 +206,7 @@ export async function transcribe(
   }
 
   // --- Cost summary ---
-  const totalCost = inputCost + totalOutputCost + namingCost;
+  const totalCost = estInputCost + totalOutputCost + namingCost;
   console.log(
     `\nOutput tokens: ${totalOutputTokens.toLocaleString()} (cost: $${totalOutputCost.toFixed(4)})`
   );
