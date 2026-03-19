@@ -1,8 +1,8 @@
 // Main transcription workflow: validates the audio file, estimates cost,
 // generates the requested outputs, and saves them with coordinated filenames.
 
-import { getSecret, prompt } from "../secrets.ts";
-import { parseEnvNumber } from "../config.ts";
+import { getSecret, prompt } from "@/secrets.ts";
+import { parseEnvNumber } from "@/config.ts";
 import path from "path";
 import type { GoogleGenAI } from "@google/genai";
 import {
@@ -13,7 +13,7 @@ import {
   createUserContent,
   createPartFromUri,
   NAMING_MODEL,
-} from "../providers/gemini.ts";
+} from "@/providers/gemini.ts";
 
 const OUTPUT_DIR = path.join(import.meta.dir, "../../output");
 

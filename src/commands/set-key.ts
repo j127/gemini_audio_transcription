@@ -1,7 +1,7 @@
 // Command handler for explicitly setting or replacing the saved Gemini API key
 // in the local keychain.
 
-import { prompt, SERVICE } from "../secrets.ts";
+import { prompt, SERVICE } from "@/secrets.ts";
 
 export async function setKey(): Promise<void> {
   const key = await prompt("Enter Gemini API key: ");
