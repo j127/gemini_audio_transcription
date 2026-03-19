@@ -124,7 +124,7 @@ The script reads these optional environment variables:
 Example:
 
 ```bash
-MAX_COST=0.10 MAX_OUTPUT_TOKENS=4096 transcribe ./audio_samples/2026-03-audio-test.m4a
+MAX_COST=0.10 MAX_OUTPUT_TOKENS=4096 transcribe my_audio.m4a
 ```
 
 If you request extra outputs with flags, the cost estimate scales up to include the additional Gemini calls before asking for confirmation.
